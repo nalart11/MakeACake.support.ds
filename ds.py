@@ -1,14 +1,12 @@
 import disnake
-import time
 from disnake.ext import commands
-from datetime import datetime
 
 # Идентификаторы каналов и ролей
-ADMIN_CHANNEL_ID = 'Id of cathegory'
-ADMIN_ROLE_ID = 'Id of admin role'
+ADMIN_CHANNEL_ID = 0
+ADMIN_ROLE_ID = 0
 
 # Токен Discord
-TOKEN = 'your token'
+TOKEN = 'YOUR_TOKEN'
 
 intents = disnake.Intents.default()
 intents.message_content = True
@@ -18,6 +16,37 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # Словарь для отслеживания активных диалогов
 active_chats = {}
 
+# Словарь переводов
+translations = {
+    'russian': {
+        'choose_language': '🇷🇺 Выберите язык / 🇬🇧 Choose your language / 🇷🇸 Изабери језик',
+        'ask_question': '❓ Задайте интересующий вопрос',
+        'close_ticket': '🔒 Закрыть тикет',
+        'confirm_close_ticket': 'Вы уверены что хотите закрыть тикет?',
+        'ticket_closed': 'Тикет закрыт и канал удалён.',
+        'private_thread_created': 'Приватная ветка создана. Можете начать диалог.',
+        'user_opened_ticket': 'Пользователь {user} открыл тикет.'
+    },
+    'english': {
+        'choose_language': '🇷🇺 Выберите язык / 🇬🇧 Choose your language / 🇷🇸 Изабери језик',
+        'ask_question': '❓ Ask a question',
+        'close_ticket': '🔒 Close ticket',
+        'confirm_close_ticket': 'Are you sure you want to close the ticket?',
+        'ticket_closed': 'Ticket closed and channel deleted.',
+        'private_thread_created': 'Private thread created. You can start a dialog.',
+        'user_opened_ticket': 'User {user} opened a ticket.'
+    },
+    'serbian': {
+        'choose_language': '🇷🇺 Выберите язык / 🇬🇧 Choose your language / 🇷🇸 Изабери језик',
+        'ask_question': '❓ Поставите питање',
+        'close_ticket': '🔒 Затворите тикет',
+        'confirm_close_ticket': 'Да ли сте сигурни да желите да затворите тикет?',
+        'ticket_closed': 'Тикет је затворен и канал је обрисан.',
+        'private_thread_created': 'Приватна тема је направљена. Можете започети дијалог.',
+        'user_opened_ticket': 'Корисник {user} је отворио тикет.'
+    }
+}
+
 # Команда для запуска бота
 @bot.event
 async def on_ready():
@@ -26,58 +55,66 @@ async def on_ready():
 # Команда /start
 @bot.slash_command(description="Start the bot")
 async def start(inter):
-    await inter.response.send_message("🇷🇺 Выберите язык / 🇬🇧 Choose your language / 🇷🇸 Изабери језик",
+    await inter.response.send_message(translations['russian']['choose_language'],
                                       view=LanguageSelectView())
 
 # Класс для меню выбора языка
 class LanguageSelectView(disnake.ui.View):
     @disnake.ui.button(label="🇷🇺 Русский", style=disnake.ButtonStyle.primary)
     async def russian_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await send_russian_main_menu(inter)
+        await send_main_menu(inter, 'russian')
     
     @disnake.ui.button(label="🇬🇧 English", style=disnake.ButtonStyle.primary)
     async def english_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await send_english_main_menu(inter)
+        await send_main_menu(inter, 'english')
     
     @disnake.ui.button(label="🇷🇸 Српски", style=disnake.ButtonStyle.primary)
     async def serbian_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await send_serbian_main_menu(inter)
+        await send_main_menu(inter, 'serbian')
 
 # Функции для отправки главного меню
-async def send_russian_main_menu(inter):
-    await inter.response.send_message('❓ Задайте интересующий вопрос', view=MainMenuView(language='russian'))
-
-async def send_english_main_menu(inter):
-    await inter.response.send_message('❓ Ask a question', view=MainMenuView(language='english'))
-
-async def send_serbian_main_menu(inter):
-    await inter.response.send_message('❓ Поставите питање', view=MainMenuView(language='serbian'))
+async def send_main_menu(inter, language):
+    await inter.response.send_message(translations[language]['ask_question'], view=MainMenuView(language))
 
 # Класс для главного меню
 class MainMenuView(disnake.ui.View):
     def __init__(self, language):
         super().__init__()
         self.language = language
+        
+        labels = self.get_labels(language)
+        
+        self.who_are_we_button.label = labels['who_are_we']
+        self.partnership_button.label = labels['partnership']
+        self.how_to_join_button.label = labels['how_to_join']
+        self.change_language_button.label = labels['change_language']
+        self.contact_us_button.label = labels['contact_us']
     
-    @disnake.ui.button(label="Кто мы такие", style=disnake.ButtonStyle.secondary, row=0)
-    async def who_are_we(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await self.send_info(inter, "Кто мы такие")
+    @disnake.ui.button(style=disnake.ButtonStyle.secondary, row=0)
+    async def who_are_we_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        await self.send_info(inter, "Кто мы такие" if self.language == 'russian' else 
+                                     "Who are we" if self.language == 'english' else 
+                                     "Ко смо")
     
-    @disnake.ui.button(label="Партнёрство", style=disnake.ButtonStyle.secondary, row=1)
-    async def partnership(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await self.send_info(inter, "Партнёрство")
+    @disnake.ui.button(style=disnake.ButtonStyle.secondary, row=1)
+    async def partnership_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        await self.send_info(inter, "Партнёрство" if self.language == 'russian' else 
+                                     "Partnership" if self.language == 'english' else 
+                                     "Партнерство")
     
-    @disnake.ui.button(label="Как к нам попасть", style=disnake.ButtonStyle.secondary, row=2)
-    async def how_to_join(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await self.send_info(inter, "Как к нам попасть")
+    @disnake.ui.button(style=disnake.ButtonStyle.secondary, row=2)
+    async def how_to_join_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        await self.send_info(inter, "Как к нам попасть" if self.language == 'russian' else 
+                                     "How to get to us" if self.language == 'english' else 
+                                     "Како доћи до нас")
     
-    @disnake.ui.button(label="Изменить язык", style=disnake.ButtonStyle.secondary, row=3)
-    async def change_language(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+    @disnake.ui.button(style=disnake.ButtonStyle.secondary, row=3)
+    async def change_language_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
         await start(inter)
     
-    @disnake.ui.button(label="Написать нам", style=disnake.ButtonStyle.secondary, row=4)
-    async def contact_us(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await start_dialog(inter)
+    @disnake.ui.button(style=disnake.ButtonStyle.secondary, row=4)
+    async def contact_us_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        await start_dialog(inter, self.language)
     
     async def send_info(self, inter, topic):
         if topic == "Кто мы такие":
@@ -99,27 +136,57 @@ class MainMenuView(disnake.ui.View):
         elif topic == "Како доћи до нас":
             await inter.response.send_message('Не долази у обзир. 💀')
 
+    def get_labels(self, language):
+        labels = {}
+        if language == 'russian':
+            labels = {
+                'who_are_we': "Кто мы такие",
+                'partnership': "Партнёрство",
+                'how_to_join': "Как к нам попасть",
+                'change_language': "Изменить язык",
+                'contact_us': "Написать нам"
+            }
+        elif language == 'english':
+            labels = {
+                'who_are_we': "Who are we",
+                'partnership': "Partnership",
+                'how_to_join': "How to get to us",
+                'change_language': "Change language",
+                'contact_us': "Contact us"
+            }
+        elif language == 'serbian':
+            labels = {
+                'who_are_we': "Ко смо",
+                'partnership': "Партнерство",
+                'how_to_join': "Како доћи до нас",
+                'change_language': "Промените језик",
+                'contact_us': "Контактирајте нас"
+            }
+        return labels
+
 # Класс для представления кнопки закрытия тикета
 class CloseTicketView(disnake.ui.View):
-    def __init__(self):
+    def __init__(self, language):
         super().__init__()
+        self.language = language
 
     @disnake.ui.button(label="🔒", style=disnake.ButtonStyle.danger)
     async def close_ticket_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await inter.response.send_message("Вы уверены что хотите закрыть тикет?", view=ConfirmCloseTicketView(inter.channel))
+        await inter.response.send_message(translations[self.language]['confirm_close_ticket'], view=ConfirmCloseTicketView(inter.channel, self.language))
 
 class ConfirmCloseTicketView(disnake.ui.View):
-    def __init__(self, channel):
+    def __init__(self, channel, language):
         super().__init__()
         self.channel = channel
+        self.language = language
 
     @disnake.ui.button(label="🔒", style=disnake.ButtonStyle.danger)
     async def confirm_close_ticket_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
         await self.channel.delete()
-        await inter.send("Тикет закрыт и канал удалён.")
+        await inter.send(translations[self.language]['ticket_closed'])
 
 # Функция для создания приватной ветки
-async def start_dialog(inter):
+async def start_dialog(inter, language):
     guild = inter.guild
     user = inter.author
 
@@ -146,9 +213,9 @@ async def start_dialog(inter):
     if last_message:
         await last_message[0].delete()
 
-    await channel.send(f"Пользователь {user.mention} открыл тикет.", view=CloseTicketView())
+    await channel.send(translations[language]['user_opened_ticket'].format(user=user.mention), view=CloseTicketView(language))
     
-    await inter.response.send_message("Приватная ветка создана. Можете начать диалог.")
+    await inter.response.send_message(translations[language]['private_thread_created'])
 
 # Запуск бота
 bot.run(TOKEN)
